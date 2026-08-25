@@ -14,6 +14,7 @@ use Inovector\Mixpost\Http\Controllers\CreateMastodonAppController;
 use Inovector\Mixpost\Http\Controllers\DashboardController;
 use Inovector\Mixpost\Http\Controllers\DeletePostsController;
 use Inovector\Mixpost\Http\Controllers\DuplicatePostController;
+use Inovector\Mixpost\Http\Controllers\ImportThreadsBrowserDataController;
 use Inovector\Mixpost\Http\Controllers\MediaController;
 use Inovector\Mixpost\Http\Controllers\MediaDownloadExternalController;
 use Inovector\Mixpost\Http\Controllers\MediaFetchGifsController;
@@ -48,6 +49,8 @@ Route::middleware([
             ->name('affiliate-analytics.index');
         Route::post('affiliate-analytics/import', [AffiliateAnalyticsController::class, 'store'])
             ->name('affiliate-analytics.store');
+        Route::post('affiliate-analytics/import/threads-browser', ImportThreadsBrowserDataController::class)
+            ->name('affiliate-analytics.threads-browser.store');
 
         Route::prefix('accounts')->name('accounts.')->group(function () {
             Route::get('/', [AccountsController::class, 'index'])->name('index');
