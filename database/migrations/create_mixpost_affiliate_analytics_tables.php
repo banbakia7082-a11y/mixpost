@@ -13,7 +13,7 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->string('platform', 32)->index();
             $table->string('external_post_id')->nullable();
-            $table->text('post_url');
+            $table->string('post_url', 500);
             $table->string('title')->nullable();
             $table->text('content')->nullable();
             $table->string('product_name')->nullable();
