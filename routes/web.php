@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
 use Inovector\Mixpost\Http\Controllers\AccountEntitiesController;
+use Inovector\Mixpost\Http\Controllers\AffiliateAnalyticsController;
 use Inovector\Mixpost\Http\Controllers\AccountsController;
 use Inovector\Mixpost\Http\Controllers\AddAccountController;
 use Inovector\Mixpost\Http\Controllers\AuthenticatedController;
@@ -42,6 +43,11 @@ Route::middleware([
     ->group(function () {
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::get('reports', ReportsController::class)->name('reports');
+
+        Route::get('affiliate-analytics', [AffiliateAnalyticsController::class, 'index'])
+            ->name('affiliate-analytics.index');
+        Route::post('affiliate-analytics/import', [AffiliateAnalyticsController::class, 'store'])
+            ->name('affiliate-analytics.store');
 
         Route::prefix('accounts')->name('accounts.')->group(function () {
             Route::get('/', [AccountsController::class, 'index'])->name('index');
