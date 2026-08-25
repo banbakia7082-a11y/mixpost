@@ -72,9 +72,13 @@ class ThreadsCollectorController
                 );
 
                 foreach ($accountData['posts'] as $row) {
+                    $postValues = ['threads_reference_account_id' => $account->id];
+                    if (filled($row['content'] ?? null)) {
+                        $postValues['content'] = $row['content'];
+                    }
                     $post = AffiliatePost::query()->updateOrCreate(
                         ['platform' => 'threads', 'post_url' => $row['post_url']],
-                        ['threads_reference_account_id' => $account->id, 'content' => $row['content'] ?? null]
+                        $postValues
                     );
                     $post->snapshots()->updateOrCreate(['captured_at' => $capturedAt], [
                         'views' => $row['views'] ?? null,

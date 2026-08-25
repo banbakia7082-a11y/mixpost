@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use Inovector\Mixpost\Http\Controllers\AccountEntitiesController;
 use Inovector\Mixpost\Http\Controllers\AffiliateAnalyticsController;
 use Inovector\Mixpost\Http\Controllers\AffiliateDraftController;
+use Inovector\Mixpost\Http\Controllers\AffiliateContentAnalysisController;
 use Inovector\Mixpost\Http\Controllers\AccountsController;
 use Inovector\Mixpost\Http\Controllers\AddAccountController;
 use Inovector\Mixpost\Http\Controllers\AuthenticatedController;
@@ -69,6 +70,8 @@ Route::middleware([
             ->name('affiliate-analytics.products.drafts.generate');
         Route::put('affiliate-analytics/drafts/{affiliateDraft}', [AffiliateDraftController::class, 'update'])
             ->name('affiliate-analytics.drafts.update');
+        Route::post('affiliate-analytics/analyze-content', AffiliateContentAnalysisController::class)
+            ->name('affiliate-analytics.analyze-content');
 
         Route::prefix('accounts')->name('accounts.')->group(function () {
             Route::get('/', [AccountsController::class, 'index'])->name('index');

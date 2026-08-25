@@ -18,6 +18,9 @@ class AffiliatePost extends Model
         'post_url',
         'title',
         'content',
+        'content_analysis',
+        'analyzed_at',
+        'analysis_version',
         'product_name',
         'product_category',
         'affiliate_network',
@@ -31,6 +34,8 @@ class AffiliatePost extends Model
     protected $casts = [
         'disclosure_present' => 'boolean',
         'published_at' => 'datetime',
+        'content_analysis' => 'array',
+        'analyzed_at' => 'datetime',
     ];
 
     protected static function booted(): void

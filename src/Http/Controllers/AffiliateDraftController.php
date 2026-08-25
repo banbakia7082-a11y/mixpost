@@ -32,14 +32,16 @@ class AffiliateDraftController
             ->whereNotNull('threads_reference_account_id')->whereNotNull('content')->get()
             ->filter(fn ($post) => $post->latestSnapshot?->views !== null)
             ->sortByDesc(fn ($post) => $post->latestSnapshot->views)->take(5)->values();
+        $dominantHook = $evidence->pluck('content_analysis.hook')->filter()->countBy()->sortDesc()->keys()->first();
+        $dominantAngle = $evidence->pluck('content_analysis.angle')->filter()->countBy()->sortDesc()->keys()->first();
 
         $variants = [
-            ['scene', "{$affiliateProduct->actual_scene}\n{$affiliateProduct->benefit}\nただ、{$affiliateProduct->drawback}"],
-            ['discovery', "{$affiliateProduct->benefit}\n{$affiliateProduct->actual_scene}\n気になる点は、{$affiliateProduct->drawback}"],
+            [($dominantAngle ?: 'scene').'-evidence', "{$affiliateProduct->actual_scene}\n{$affiliateProduct->benefit}\nただ、{$affiliateProduct->drawback}"],
+            [($dominantHook ?: 'discovery').'-hook', "{$affiliateProduct->benefit}\n{$affiliateProduct->actual_scene}\n気になる点は、{$affiliateProduct->drawback}"],
             ['balanced', "{$affiliateProduct->actual_scene}\n便利だったのは、{$affiliateProduct->benefit}\n一方で、{$affiliateProduct->drawback}"],
         ];
 
-        DB::transaction(function () use ($affiliateProduct, $evidence, $variants) {
+        DB::transaction(function () use ($affiliateProduct, $evidence, $variants, $dominantHook, $dominantAngle) {
             foreach ($variants as [$angle, $parent]) {
                 $reply = "使っているのは「{$affiliateProduct->name}」です。\n{$affiliateProduct->drawback}\n［PR・{$affiliateProduct->network}アフィリエイト］\n{$affiliateProduct->affiliate_url}";
                 AffiliateDraft::query()->create([
@@ -51,7 +53,7 @@ class AffiliateDraftController
                     'evidence_post_ids' => $evidence->pluck('id')->all(),
                     'generation_reason' => $evidence->isEmpty()
                         ? '登録された実体験だけを使って生成しました。参考投稿の表示回数データは不足しています。'
-                        : '表示回数上位の参考投稿を根拠候補として選び、文章は転用せず、登録された実体験だけで生成しました。',
+                        : '表示回数上位の参考投稿では、冒頭は'.($dominantHook ?: '未判定').'型、訴求は'.($dominantAngle ?: '未判定').'型が中心でした。文章は転用せず、登録された実体験だけで生成しました。',
                 ]);
             }
         });

@@ -85,7 +85,10 @@ try {
       await page.goto(postUrl); await wait(2200);
       const viewTexts = await page.getByText(/表示.*回/).allTextContents().catch(() => []);
       const labels = await page.getByRole('button').allTextContents();
-      const content = await page.locator('div[dir="auto"]').first().textContent({timeout:2000}).catch(() => null);
+      const contentCandidates = await page.locator('div[dir="auto"], span[dir="auto"]').allTextContents().catch(() => []);
+      const content = contentCandidates.map(value => value.trim())
+        .filter(value => value.length >= 12 && !/^(Threads|フォロー|返信|いいね|再投稿|シェア)$/u.test(value))
+        .sort((a, b) => b.length - a.length)[0] || null;
       posts.push({post_url:postUrl, content, views:compact(viewTexts[0]), reactions:actionNumber(labels,'いいね'), replies:actionNumber(labels,'返信'), reposts:actionNumber(labels,'再投稿')});
       await wait(1800);
     }

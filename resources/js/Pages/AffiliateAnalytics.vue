@@ -9,6 +9,7 @@ defineProps({
     researchRequests: Array,
     affiliateProducts: Array,
     affiliateDrafts: Array,
+    patternSummary: Object,
 });
 
 const csvForm = useForm({file: null});
@@ -71,6 +72,10 @@ const updateDraft = (draft, status) => {
         .put(route('mixpost.affiliate-analytics.drafts.update', draft.uuid), {preserveScroll: true});
 };
 
+const analyzeContent = () => {
+    useForm({}).post(route('mixpost.affiliate-analytics.analyze-content'), {preserveScroll: true});
+};
+
 const number = (value) => new Intl.NumberFormat('ja-JP').format(value || 0);
 const money = (value) => new Intl.NumberFormat('ja-JP', {
     style: 'currency',
@@ -107,6 +112,13 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
             <section class="bg-white border border-gray-200 rounded-lg p-lg xl:col-span-2">
                 <h2 class="font-semibold mb-xs">アフィリエイト投稿案を作る</h2>
                 <p class="text-sm text-gray-500 mb-md">確認できる実体験だけを登録します。リンクとPR表記は返信案へ分離し、自動公開はしません。</p>
+                <div class="mb-md flex flex-wrap items-center gap-sm rounded-lg bg-gray-50 p-md text-sm">
+                    <button @click="analyzeContent" class="rounded-md bg-white border px-md py-xs">収集済み文章を再分析</button>
+                    <span>分析済み {{ number(patternSummary.analyzed_posts) }}件</span>
+                    <span>上位{{ number(patternSummary.top_sample_size) }}件の中心：</span>
+                    <strong>冒頭 {{ patternSummary.dominant_hook || '未判定' }}</strong>
+                    <strong>訴求 {{ patternSummary.dominant_angle || '未判定' }}</strong>
+                </div>
                 <form @submit.prevent="submitProduct" class="grid grid-cols-1 md:grid-cols-2 gap-md">
                     <input v-model="productForm.name" required placeholder="商品名" class="rounded-md border-gray-300"/>
                     <input v-model="productForm.category" placeholder="カテゴリ（任意）" class="rounded-md border-gray-300"/>
@@ -264,6 +276,9 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
                             </div>
                             <div v-if="post.reference_account" class="text-xs text-gray-500 mb-xs">
                                 @{{ post.reference_account.handle }}
+                            </div>
+                            <div v-if="post.content_analysis" class="text-xs text-indigo-700 mb-xs">
+                                {{ post.content_analysis.hook }}／{{ post.content_analysis.angle }}／具体性 {{ post.content_analysis.scores.specificity }}/10
                             </div>
                             <a :href="post.post_url" target="_blank" class="font-medium hover:underline">
                                 {{ post.title || post.content || post.post_url }}

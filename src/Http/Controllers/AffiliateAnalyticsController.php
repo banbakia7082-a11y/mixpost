@@ -27,8 +27,17 @@ class AffiliateAnalyticsController
             ->get();
 
         $latest = $posts->pluck('latestSnapshot')->filter();
+        $analyzedTop = $posts->filter(fn ($post) => $post->referenceAccount && $post->content_analysis && $post->latestSnapshot?->views !== null)
+            ->sortByDesc(fn ($post) => $post->latestSnapshot->views)->take(20);
+        $topValue = fn (string $key) => $analyzedTop->pluck("content_analysis.{$key}")->filter()->countBy()->sortDesc()->keys()->first();
 
         return Inertia::render('AffiliateAnalytics', [
+            'patternSummary' => [
+                'analyzed_posts' => $posts->whereNotNull('content_analysis')->count(),
+                'top_sample_size' => $analyzedTop->count(),
+                'dominant_hook' => $topValue('hook'),
+                'dominant_angle' => $topValue('angle'),
+            ],
             'affiliateProducts' => AffiliateProduct::query()->latest()->get()->map(fn ($product) => [
                 'uuid' => $product->uuid,
                 'name' => $product->name,
@@ -111,6 +120,7 @@ class AffiliateAnalyticsController
                 'post_url' => $post->post_url,
                 'title' => $post->title,
                 'content' => $post->content,
+                'content_analysis' => $post->content_analysis,
                 'product_name' => $post->product_name,
                 'product_category' => $post->product_category,
                 'affiliate_network' => $post->affiliate_network,

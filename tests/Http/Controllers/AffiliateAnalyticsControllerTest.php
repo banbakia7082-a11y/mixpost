@@ -8,9 +8,20 @@ use Inovector\Mixpost\Models\AffiliateProduct;
 use Inovector\Mixpost\Models\User;
 use Inovector\Mixpost\Models\ThreadsReferenceAccount;
 use Inovector\Mixpost\Models\ThreadsResearchRequest;
+use Inovector\Mixpost\Services\AffiliateContentAnalyzer;
 
 beforeEach(function () {
     test()->user = User::factory()->create();
+});
+
+test('classifies a Threads post with inspectable evidence', function () {
+    $analysis = app(AffiliateContentAnalyzer::class)->analyze("駅に入ったとき片手で畳めました。\nただ、普通の傘より少し重いです。");
+
+    expect($analysis['hook'])->toBe('statement')
+        ->and($analysis['angle'])->toBe('comparison')
+        ->and($analysis['structure']['has_drawback'])->toBeTrue()
+        ->and($analysis['evidence'])->toHaveCount(2)
+        ->and($analysis['method'])->toBe('deterministic-rules');
 });
 
 test('creates reviewable affiliate drafts without placing the link in the parent post', function () {
