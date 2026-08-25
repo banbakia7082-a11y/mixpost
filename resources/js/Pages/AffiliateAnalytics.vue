@@ -7,13 +7,21 @@ defineProps({
     posts: Array,
 });
 
-const form = useForm({file: null});
+const csvForm = useForm({file: null});
+const threadsForm = useForm({payload: ''});
 
-const submit = () => {
-    form.post(route('mixpost.affiliate-analytics.store'), {
+const submitCsv = () => {
+    csvForm.post(route('mixpost.affiliate-analytics.store'), {
         forceFormData: true,
         preserveScroll: true,
-        onSuccess: () => form.reset(),
+        onSuccess: () => csvForm.reset(),
+    });
+};
+
+const submitThreads = () => {
+    threadsForm.post(route('mixpost.affiliate-analytics.threads-browser.store'), {
+        preserveScroll: true,
+        onSuccess: () => threadsForm.reset(),
     });
 };
 
@@ -49,20 +57,37 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
             </div>
         </div>
 
-        <div class="row-px mb-xl">
-            <form @submit.prevent="submit" class="bg-white border border-gray-200 rounded-lg p-lg">
+        <div class="row-px grid grid-cols-1 xl:grid-cols-2 gap-lg mb-xl">
+            <form @submit.prevent="submitThreads" class="bg-white border border-gray-200 rounded-lg p-lg">
+                <h2 class="font-semibold mb-xs">Threadsブラウザ取り込み</h2>
+                <p class="text-sm text-gray-500 mb-md">
+                    CodexがThreads画面から収集したJSONを貼り付けます。同じ計測日時は重複せず更新されます。
+                </p>
+                <textarea v-model="threadsForm.payload" rows="7"
+                          placeholder='{"captured_at":"2026-08-25T21:00:00+09:00","posts":[...]}'
+                          class="w-full rounded-md border-gray-300 font-mono text-sm"/>
+                <button type="submit" :disabled="threadsForm.processing || !threadsForm.payload"
+                        class="mt-md px-lg py-sm rounded-md bg-black text-white disabled:opacity-50">
+                    {{ threadsForm.processing ? '取り込み中…' : 'Threadsデータを取り込む' }}
+                </button>
+                <p v-if="threadsForm.errors.payload" class="text-red-500 text-sm mt-sm">
+                    {{ threadsForm.errors.payload }}
+                </p>
+            </form>
+
+            <form @submit.prevent="submitCsv" class="bg-white border border-gray-200 rounded-lg p-lg">
                 <h2 class="font-semibold mb-xs">CSV取り込み</h2>
                 <p class="text-sm text-gray-500 mb-md">
-                    必須列: platform, post_url, captured_at。複数回取り込むと最新値を更新します。
+                    必須列: platform, post_url, captured_at。noteや成果データの取り込みに使用できます。
                 </p>
                 <div class="flex flex-wrap items-center gap-md">
-                    <input type="file" accept=".csv,text/csv" @change="form.file = $event.target.files[0]"/>
-                    <button type="submit" :disabled="form.processing || !form.file"
+                    <input type="file" accept=".csv,text/csv" @change="csvForm.file = $event.target.files[0]"/>
+                    <button type="submit" :disabled="csvForm.processing || !csvForm.file"
                             class="px-lg py-sm rounded-md bg-black text-white disabled:opacity-50">
-                        {{ form.processing ? '取り込み中…' : '取り込む' }}
+                        {{ csvForm.processing ? '取り込み中…' : 'CSVを取り込む' }}
                     </button>
                 </div>
-                <p v-if="form.errors.file" class="text-red-500 text-sm mt-sm">{{ form.errors.file }}</p>
+                <p v-if="csvForm.errors.file" class="text-red-500 text-sm mt-sm">{{ csvForm.errors.file }}</p>
             </form>
         </div>
 
@@ -100,7 +125,7 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
                     </tr>
                     <tr v-if="!posts.length">
                         <td colspan="7" class="p-xl text-center text-gray-500">
-                            まだデータがありません。CSVを取り込むと分析を開始できます。
+                            まだデータがありません。Threads JSONまたはCSVを取り込むと分析を開始できます。
                         </td>
                     </tr>
                     </tbody>
