@@ -10,13 +10,15 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Inovector\Mixpost\Models\AffiliatePost;
+use Inovector\Mixpost\Models\ThreadsReferenceAccount;
+use Inovector\Mixpost\Models\ThreadsResearchRequest;
 
 class AffiliateAnalyticsController
 {
     public function index(): Response
     {
         $posts = AffiliatePost::query()
-            ->with('latestSnapshot')
+            ->with(['latestSnapshot', 'referenceAccount'])
             ->latest('published_at')
             ->latest('id')
             ->limit(250)
@@ -33,6 +35,45 @@ class AffiliateAnalyticsController
                 'sales' => $latest->sum('sales'),
                 'revenue' => (float) $latest->sum('revenue'),
             ],
+            'referenceAccounts' => ThreadsReferenceAccount::query()
+                ->withCount('posts')
+                ->orderBy('handle')
+                ->get()
+                ->map(function (ThreadsReferenceAccount $account) {
+                    $snapshots = $account->posts->load('latestSnapshot')->pluck('latestSnapshot')->filter();
+                    $views = $snapshots->pluck('views')->filter()->sort()->values();
+                    $rates = $snapshots->filter(fn ($snapshot) => $snapshot->views > 0)
+                        ->map(fn ($snapshot) => (($snapshot->reactions ?? 0) + ($snapshot->replies ?? 0)
+                            + ($snapshot->reposts ?? 0) + ($snapshot->quotes ?? 0)) / $snapshot->views * 100)
+                        ->sort()->values();
+                    $median = fn ($items) => $items->isEmpty() ? null : ($items->count() % 2
+                        ? $items->get(intdiv($items->count(), 2))
+                        : ($items->get($items->count() / 2 - 1) + $items->get($items->count() / 2)) / 2);
+
+                    return [
+                    'uuid' => $account->uuid,
+                    'handle' => $account->handle,
+                    'display_name' => $account->display_name,
+                    'profile_url' => $account->profile_url,
+                    'posts_count' => $account->posts_count,
+                    'median_views' => $median($views),
+                    'median_engagement_rate' => $median($rates) === null ? null : round($median($rates), 2),
+                    'assessment' => $snapshots->count() < 5 ? 'データ不足' : '判定可能',
+                    ];
+                }),
+            'researchRequests' => ThreadsResearchRequest::query()->latest()->limit(20)->get()->map(fn ($request) => [
+                'uuid' => $request->uuid,
+                'topic' => $request->topic,
+                'keywords' => $request->keywords,
+                'posts_per_account' => $request->posts_per_account,
+                'candidate_limit' => $request->candidate_limit,
+                'frequency' => $request->frequency,
+                'status' => $request->status,
+                'attempts' => $request->attempts,
+                'last_run_at' => $request->last_run_at?->toIso8601String(),
+                'next_run_at' => $request->next_run_at?->toIso8601String(),
+                'last_error' => $request->last_error,
+            ]),
             'posts' => $posts->map(fn (AffiliatePost $post) => [
                 'uuid' => $post->uuid,
                 'platform' => $post->platform,
@@ -46,6 +87,10 @@ class AffiliateAnalyticsController
                 'image_type' => $post->image_type,
                 'disclosure_present' => $post->disclosure_present,
                 'published_at' => $post->published_at?->toIso8601String(),
+                'reference_account' => $post->referenceAccount ? [
+                    'handle' => $post->referenceAccount->handle,
+                    'display_name' => $post->referenceAccount->display_name,
+                ] : null,
                 'metrics' => $post->latestSnapshot ? [
                     'captured_at' => $post->latestSnapshot->captured_at?->toIso8601String(),
                     'views' => $post->latestSnapshot->views,
@@ -56,6 +101,12 @@ class AffiliateAnalyticsController
                     'link_clicks' => $post->latestSnapshot->link_clicks,
                     'sales' => $post->latestSnapshot->sales,
                     'revenue' => (float) ($post->latestSnapshot->revenue ?? 0),
+                    'engagement_rate' => $post->latestSnapshot->views
+                        ? round((($post->latestSnapshot->reactions ?? 0)
+                            + ($post->latestSnapshot->replies ?? 0)
+                            + ($post->latestSnapshot->reposts ?? 0)
+                            + ($post->latestSnapshot->quotes ?? 0)) / $post->latestSnapshot->views * 100, 2)
+                        : null,
                 ] : null,
             ]),
         ]);

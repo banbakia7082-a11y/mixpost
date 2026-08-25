@@ -41,6 +41,9 @@ class MixpostServiceProvider extends PackageServiceProvider
             ->hasMigrations([
                 'create_mixpost_tables',
                 'create_mixpost_affiliate_analytics_tables',
+                'create_mixpost_threads_reference_accounts_table',
+                'create_mixpost_threads_research_requests_table',
+                'add_retry_fields_to_mixpost_threads_research_requests_table',
             ])
             ->hasCommands([
                 PublishAssetsCommand::class,

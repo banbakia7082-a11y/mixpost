@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Inovector\Mixpost\Models\AffiliatePost;
+use Inovector\Mixpost\Models\ThreadsReferenceAccount;
 
 class ImportThreadsBrowserDataController
 {
@@ -26,6 +27,7 @@ class ImportThreadsBrowserDataController
             'captured_at' => ['required', 'date'],
             'posts' => ['required', 'array', 'min:1', 'max:250'],
             'posts.*.post_url' => ['required', 'url', 'max:500'],
+            'posts.*.author_handle' => ['nullable', 'string', 'max:255'],
             'posts.*.external_post_id' => ['nullable', 'string', 'max:255'],
             'posts.*.content' => ['nullable', 'string'],
             'posts.*.published_at' => ['nullable', 'date'],
@@ -53,8 +55,14 @@ class ImportThreadsBrowserDataController
 
         DB::transaction(function () use ($data, $capturedAt, &$imported) {
             foreach ($data['posts'] as $row) {
+                $handle = ltrim(strtolower((string) ($row['author_handle'] ?? '')), '@');
+                $referenceAccountId = $handle === '' ? null : ThreadsReferenceAccount::query()
+                    ->where('handle', $handle)
+                    ->value('id');
+
                 $post = AffiliatePost::query()->updateOrCreate(
                     [
+                        'threads_reference_account_id' => $referenceAccountId,
                         'platform' => 'threads',
                         'post_url' => $row['post_url'],
                     ],

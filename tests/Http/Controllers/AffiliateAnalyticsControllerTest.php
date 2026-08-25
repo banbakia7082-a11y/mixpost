@@ -4,6 +4,8 @@ use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
 use Inovector\Mixpost\Models\AffiliatePost;
 use Inovector\Mixpost\Models\User;
+use Inovector\Mixpost\Models\ThreadsReferenceAccount;
+use Inovector\Mixpost\Models\ThreadsResearchRequest;
 
 beforeEach(function () {
     test()->user = User::factory()->create();
@@ -125,4 +127,60 @@ test('rejects invalid Threads browser payload', function () {
         ->assertSessionHasErrors('payload');
 
     expect(AffiliatePost::query()->count())->toBe(0);
+});
+
+test('registers a Threads reference account and links imported posts', function () {
+    $this->actingAs(test()->user)
+        ->post(route('mixpost.affiliate-analytics.reference-accounts.store'), [
+            'handle' => '@Example.Account',
+            'display_name' => 'Example',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $account = ThreadsReferenceAccount::query()->first();
+
+    expect($account->handle)->toBe('example.account')
+        ->and($account->profile_url)->toBe('https://www.threads.com/@example.account');
+
+    $payload = [
+        'captured_at' => '2026-08-25T21:00:00+09:00',
+        'posts' => [[
+            'post_url' => 'https://www.threads.com/@example.account/post/abc',
+            'author_handle' => '@EXAMPLE.ACCOUNT',
+            'views' => 1000,
+            'reactions' => 50,
+            'replies' => 10,
+            'reposts' => 5,
+        ]],
+    ];
+
+    $this->post(route('mixpost.affiliate-analytics.threads-browser.store'), [
+        'payload' => json_encode($payload),
+    ])->assertSessionHasNoErrors();
+
+    expect(AffiliatePost::query()->first()->threads_reference_account_id)->toBe($account->id);
+
+    $this->publishAssets();
+    $this->get(route('mixpost.affiliate-analytics.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('referenceAccounts.0.handle', 'example.account')
+            ->where('posts.0.reference_account.handle', 'example.account')
+            ->where('posts.0.metrics.engagement_rate', 6.5)
+        );
+});
+
+test('queues a Threads research request', function () {
+    $this->actingAs(test()->user)
+        ->post(route('mixpost.affiliate-analytics.research-requests.store'), [
+            'topic' => '暮らしの愛用品',
+            'keywords' => "買ってよかった、愛用品\n便利グッズ",
+            'posts_per_account' => 10,
+            'candidate_limit' => 5,
+            'frequency' => 'weekly',
+        ])->assertSessionHasNoErrors();
+
+    $request = ThreadsResearchRequest::query()->first();
+    expect($request->status)->toBe('queued')
+        ->and($request->keywords)->toBe(['買ってよかった', '愛用品', '便利グッズ'])
+        ->and($request->next_run_at)->not->toBeNull();
 });

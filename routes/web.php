@@ -15,6 +15,9 @@ use Inovector\Mixpost\Http\Controllers\DashboardController;
 use Inovector\Mixpost\Http\Controllers\DeletePostsController;
 use Inovector\Mixpost\Http\Controllers\DuplicatePostController;
 use Inovector\Mixpost\Http\Controllers\ImportThreadsBrowserDataController;
+use Inovector\Mixpost\Http\Controllers\ThreadsReferenceAccountController;
+use Inovector\Mixpost\Http\Controllers\ThreadsResearchRequestController;
+use Inovector\Mixpost\Http\Controllers\ThreadsCollectorController;
 use Inovector\Mixpost\Http\Controllers\MediaController;
 use Inovector\Mixpost\Http\Controllers\MediaDownloadExternalController;
 use Inovector\Mixpost\Http\Controllers\MediaFetchGifsController;
@@ -51,6 +54,14 @@ Route::middleware([
             ->name('affiliate-analytics.store');
         Route::post('affiliate-analytics/import/threads-browser', ImportThreadsBrowserDataController::class)
             ->name('affiliate-analytics.threads-browser.store');
+        Route::post('affiliate-analytics/reference-accounts', [ThreadsReferenceAccountController::class, 'store'])
+            ->name('affiliate-analytics.reference-accounts.store');
+        Route::delete('affiliate-analytics/reference-accounts/{threadsReferenceAccount}', [ThreadsReferenceAccountController::class, 'destroy'])
+            ->name('affiliate-analytics.reference-accounts.destroy');
+        Route::post('affiliate-analytics/research-requests', [ThreadsResearchRequestController::class, 'store'])
+            ->name('affiliate-analytics.research-requests.store');
+        Route::post('affiliate-analytics/research-requests/{threadsResearchRequest}/run', [ThreadsResearchRequestController::class, 'run'])
+            ->name('affiliate-analytics.research-requests.run');
 
         Route::prefix('accounts')->name('accounts.')->group(function () {
             Route::get('/', [AccountsController::class, 'index'])->name('index');
@@ -139,3 +150,9 @@ Route::middleware([
 
         Route::get('callback/{provider}', CallbackSocialProviderController::class)->name('callbackSocialProvider');
     });
+
+Route::middleware('api')->prefix('mixpost/collector/threads')->group(function () {
+    Route::post('claim', [ThreadsCollectorController::class, 'claim']);
+    Route::post('{threadsResearchRequest}/complete', [ThreadsCollectorController::class, 'complete']);
+    Route::post('{threadsResearchRequest}/fail', [ThreadsCollectorController::class, 'fail']);
+});

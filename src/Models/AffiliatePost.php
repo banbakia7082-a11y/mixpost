@@ -4,6 +4,7 @@ namespace Inovector\Mixpost\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
 class AffiliatePost extends Model
@@ -12,6 +13,7 @@ class AffiliatePost extends Model
 
     protected $fillable = [
         'platform',
+        'threads_reference_account_id',
         'external_post_id',
         'post_url',
         'title',
@@ -41,6 +43,11 @@ class AffiliatePost extends Model
     public function snapshots(): HasMany
     {
         return $this->hasMany(AffiliatePostSnapshot::class);
+    }
+
+    public function referenceAccount(): BelongsTo
+    {
+        return $this->belongsTo(ThreadsReferenceAccount::class, 'threads_reference_account_id');
     }
 
     public function latestSnapshot()

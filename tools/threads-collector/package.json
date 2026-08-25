@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "collect": "node collector.mjs",
+    "login": "node collector.mjs --login"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}
+

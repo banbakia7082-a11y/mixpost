@@ -10,6 +10,7 @@ Codexがログイン済みのThreads画面から投稿情報を読み取り、Af
   "posts": [
     {
       "post_url": "https://www.threads.net/@example/post/abc",
+      "author_handle": "example",
       "external_post_id": "abc",
       "content": "投稿本文",
       "published_at": "2026-08-24T08:30:00+09:00",
@@ -33,3 +34,5 @@ Codexがログイン済みのThreads画面から投稿情報を読み取り、Af
 `captured_at` は収集を行った日時です。同じ投稿URLと同じ計測日時を再度取り込んだ場合、スナップショットを重複作成せず更新します。
 
 Threads画面で確認できない数値は省略できます。クリック数、成果件数、報酬はThreads画面では取得できないため、Amazonアソシエイトなどの成果データをCSVで追加します。
+
+`author_handle` が「参考アカウント」に登録済みのハンドルと一致すると、その投稿は自動的に参考投稿として紐付きます。表示回数はプロフィール一覧ではなく投稿詳細画面から取得します。

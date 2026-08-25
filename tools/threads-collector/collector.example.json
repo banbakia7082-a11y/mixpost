@@ -1,0 +1,7 @@
+{
+  "mixpostEnvPath": "../../../pc-mixpost/.env",
+  "mixpostComposePath": "../../../pc-mixpost",
+  "profilePath": "profile",
+  "edgePath": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"
+}
+

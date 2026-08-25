@@ -5,10 +5,20 @@ import PageHeader from "@/Components/DataDisplay/PageHeader.vue";
 defineProps({
     summary: Object,
     posts: Array,
+    referenceAccounts: Array,
+    researchRequests: Array,
 });
 
 const csvForm = useForm({file: null});
 const threadsForm = useForm({payload: ''});
+const referenceForm = useForm({handle: '', display_name: ''});
+const researchForm = useForm({
+    topic: '暮らしを少し楽にする愛用品',
+    keywords: '買ってよかった、愛用品、便利グッズ、美容、日用品',
+    posts_per_account: 10,
+    candidate_limit: 5,
+    frequency: 'weekly',
+});
 
 const submitCsv = () => {
     csvForm.post(route('mixpost.affiliate-analytics.store'), {
@@ -23,6 +33,21 @@ const submitThreads = () => {
         preserveScroll: true,
         onSuccess: () => threadsForm.reset(),
     });
+};
+
+const submitReference = () => {
+    referenceForm.post(route('mixpost.affiliate-analytics.reference-accounts.store'), {
+        preserveScroll: true,
+        onSuccess: () => referenceForm.reset(),
+    });
+};
+
+const submitResearch = () => {
+    researchForm.post(route('mixpost.affiliate-analytics.research-requests.store'), {preserveScroll: true});
+};
+
+const runResearch = (request) => {
+    useForm({}).post(route('mixpost.affiliate-analytics.research-requests.run', request.uuid), {preserveScroll: true});
 };
 
 const number = (value) => new Intl.NumberFormat('ja-JP').format(value || 0);
@@ -58,6 +83,56 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
         </div>
 
         <div class="row-px grid grid-cols-1 xl:grid-cols-2 gap-lg mb-xl">
+            <section class="bg-white border border-gray-200 rounded-lg p-lg xl:col-span-2">
+                <h2 class="font-semibold mb-xs">参考アカウントを自動調査</h2>
+                <p class="text-sm text-gray-500 mb-md">テーマから候補を探し、各アカウントの直近投稿を比較する調査依頼を作成します。</p>
+                <form @submit.prevent="submitResearch" class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                    <input v-model="researchForm.topic" required placeholder="調査テーマ" class="rounded-md border-gray-300"/>
+                    <input v-model="researchForm.keywords" required placeholder="検索語（読点区切り）" class="rounded-md border-gray-300"/>
+                    <label class="text-sm">1アカウントの投稿数
+                        <input v-model="researchForm.posts_per_account" type="number" min="3" max="20" class="mt-xs w-full rounded-md border-gray-300"/>
+                    </label>
+                    <label class="text-sm">候補アカウント数
+                        <input v-model="researchForm.candidate_limit" type="number" min="1" max="10" class="mt-xs w-full rounded-md border-gray-300"/>
+                    </label>
+                    <select v-model="researchForm.frequency" class="rounded-md border-gray-300">
+                        <option value="manual">手動のみ</option><option value="daily">毎日</option><option value="weekly">週1回</option>
+                    </select>
+                    <button type="submit" :disabled="researchForm.processing" class="px-lg py-sm rounded-md bg-black text-white disabled:opacity-50">調査を登録</button>
+                </form>
+                <div class="mt-lg space-y-sm">
+                    <div v-for="request in researchRequests" :key="request.uuid" class="flex flex-wrap items-center justify-between gap-sm border-t pt-sm text-sm">
+                        <div>
+                            <strong>{{ request.topic }}</strong><span class="text-gray-500 ml-sm">{{ request.keywords.join('・') }}／{{ request.status }}</span>
+                            <div v-if="request.last_error" class="text-red-600 text-xs mt-xs">{{ request.last_error }}（試行 {{ request.attempts }}/3）</div>
+                        </div>
+                        <button @click="runResearch(request)" class="rounded-md bg-gray-100 px-md py-xs">今すぐ実行待ちにする</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white border border-gray-200 rounded-lg p-lg">
+                <h2 class="font-semibold mb-xs">参考アカウント</h2>
+                <p class="text-sm text-gray-500 mb-md">分析したいThreadsアカウントを登録します。</p>
+                <form @submit.prevent="submitReference" class="flex flex-wrap gap-sm">
+                    <input v-model="referenceForm.handle" required placeholder="@threads"
+                           class="rounded-md border-gray-300"/>
+                    <input v-model="referenceForm.display_name" placeholder="表示名（任意）"
+                           class="rounded-md border-gray-300"/>
+                    <button type="submit" :disabled="referenceForm.processing"
+                            class="px-lg py-sm rounded-md bg-black text-white disabled:opacity-50">追加</button>
+                </form>
+                <p v-if="referenceForm.errors.handle" class="text-red-500 text-sm mt-sm">{{ referenceForm.errors.handle }}</p>
+                <div class="flex flex-wrap gap-sm mt-md">
+                    <a v-for="account in referenceAccounts" :key="account.uuid" :href="account.profile_url" target="_blank"
+                       class="rounded-lg bg-gray-100 px-md py-sm text-sm hover:bg-gray-200">
+                        <strong>@{{ account.handle }}</strong>（{{ number(account.posts_count) }}件）<br>
+                        <span class="text-xs text-gray-500">中央値 {{ account.median_views == null ? '—' : number(account.median_views) }}表示・{{ account.median_engagement_rate == null ? '—' : account.median_engagement_rate + '%' }}／{{ account.assessment }}</span>
+                    </a>
+                    <span v-if="!referenceAccounts.length" class="text-sm text-gray-500">まだ登録されていません。</span>
+                </div>
+            </section>
+
             <form @submit.prevent="submitThreads" class="bg-white border border-gray-200 rounded-lg p-lg">
                 <h2 class="font-semibold mb-xs">Threadsブラウザ取り込み</h2>
                 <p class="text-sm text-gray-500 mb-md">
@@ -75,7 +150,7 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
                 </p>
             </form>
 
-            <form @submit.prevent="submitCsv" class="bg-white border border-gray-200 rounded-lg p-lg">
+            <form @submit.prevent="submitCsv" class="bg-white border border-gray-200 rounded-lg p-lg xl:col-span-2">
                 <h2 class="font-semibold mb-xs">CSV取り込み</h2>
                 <p class="text-sm text-gray-500 mb-md">
                     必須列: platform, post_url, captured_at。noteや成果データの取り込みに使用できます。
@@ -100,6 +175,7 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
                         <th class="text-left p-md">商品</th>
                         <th class="text-right p-md">表示</th>
                         <th class="text-right p-md">反応</th>
+                        <th class="text-right p-md">反応率</th>
                         <th class="text-right p-md">クリック</th>
                         <th class="text-right p-md">成果</th>
                         <th class="text-right p-md">報酬</th>
@@ -112,6 +188,9 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
                                 <span class="uppercase text-xs font-semibold text-gray-500">{{ post.platform }}</span>
                                 <span v-if="post.disclosure_present" class="text-xs text-green-700">PR表記あり</span>
                             </div>
+                            <div v-if="post.reference_account" class="text-xs text-gray-500 mb-xs">
+                                @{{ post.reference_account.handle }}
+                            </div>
                             <a :href="post.post_url" target="_blank" class="font-medium hover:underline">
                                 {{ post.title || post.content || post.post_url }}
                             </a>
@@ -119,12 +198,15 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
                         <td class="p-md">{{ post.product_name || '—' }}</td>
                         <td class="p-md text-right">{{ number(post.metrics?.views) }}</td>
                         <td class="p-md text-right">{{ number(post.metrics?.reactions) }}</td>
+                        <td class="p-md text-right">
+                            {{ post.metrics?.engagement_rate == null ? '—' : `${post.metrics.engagement_rate}%` }}
+                        </td>
                         <td class="p-md text-right">{{ number(post.metrics?.link_clicks) }}</td>
                         <td class="p-md text-right">{{ number(post.metrics?.sales) }}</td>
                         <td class="p-md text-right">{{ money(post.metrics?.revenue) }}</td>
                     </tr>
                     <tr v-if="!posts.length">
-                        <td colspan="7" class="p-xl text-center text-gray-500">
+                        <td colspan="8" class="p-xl text-center text-gray-500">
                             まだデータがありません。Threads JSONまたはCSVを取り込むと分析を開始できます。
                         </td>
                     </tr>

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'threads_collector_token' => env('MIXPOST_THREADS_COLLECTOR_TOKEN', env('APP_KEY')),
     /*
     * This option controls the default authentication "guard" for the Mixpost routes
     */
