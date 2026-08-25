@@ -10,6 +10,8 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Inovector\Mixpost\Models\AffiliatePost;
+use Inovector\Mixpost\Models\AffiliateDraft;
+use Inovector\Mixpost\Models\AffiliateProduct;
 use Inovector\Mixpost\Models\ThreadsReferenceAccount;
 use Inovector\Mixpost\Models\ThreadsResearchRequest;
 
@@ -27,6 +29,35 @@ class AffiliateAnalyticsController
         $latest = $posts->pluck('latestSnapshot')->filter();
 
         return Inertia::render('AffiliateAnalytics', [
+            'affiliateProducts' => AffiliateProduct::query()->latest()->get()->map(fn ($product) => [
+                'uuid' => $product->uuid,
+                'name' => $product->name,
+                'category' => $product->category,
+                'network' => $product->network,
+                'actual_scene' => $product->actual_scene,
+                'benefit' => $product->benefit,
+                'drawback' => $product->drawback,
+            ]),
+            'affiliateDrafts' => AffiliateDraft::query()->with('product')->latest()->limit(30)->get()->map(function ($draft) {
+                $evidence = AffiliatePost::query()->with('latestSnapshot')
+                    ->whereIn('id', $draft->evidence_post_ids ?? [])->get();
+
+                return [
+                    'uuid' => $draft->uuid,
+                    'product_name' => $draft->product->name,
+                    'parent_post' => $draft->parent_post,
+                    'reply_post' => $draft->reply_post,
+                    'angle' => $draft->angle,
+                    'scores' => $draft->scores,
+                    'generation_reason' => $draft->generation_reason,
+                    'status' => $draft->status,
+                    'evidence_posts' => $evidence->map(fn ($post) => [
+                        'url' => $post->post_url,
+                        'excerpt' => mb_strimwidth($post->content ?? $post->post_url, 0, 80, '…'),
+                        'views' => $post->latestSnapshot?->views,
+                    ]),
+                ];
+            }),
             'summary' => [
                 'posts' => $posts->count(),
                 'views' => $latest->sum('views'),

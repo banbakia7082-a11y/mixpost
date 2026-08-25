@@ -7,6 +7,8 @@ defineProps({
     posts: Array,
     referenceAccounts: Array,
     researchRequests: Array,
+    affiliateProducts: Array,
+    affiliateDrafts: Array,
 });
 
 const csvForm = useForm({file: null});
@@ -18,6 +20,9 @@ const researchForm = useForm({
     posts_per_account: 10,
     candidate_limit: 5,
     frequency: 'weekly',
+});
+const productForm = useForm({
+    name: '', category: '', network: 'Amazon', affiliate_url: '', actual_scene: '', benefit: '', drawback: '',
 });
 
 const submitCsv = () => {
@@ -48,6 +53,22 @@ const submitResearch = () => {
 
 const runResearch = (request) => {
     useForm({}).post(route('mixpost.affiliate-analytics.research-requests.run', request.uuid), {preserveScroll: true});
+};
+
+const submitProduct = () => {
+    productForm.post(route('mixpost.affiliate-analytics.products.store'), {
+        preserveScroll: true,
+        onSuccess: () => productForm.reset('name', 'category', 'affiliate_url', 'actual_scene', 'benefit', 'drawback'),
+    });
+};
+
+const generateDrafts = (product) => {
+    useForm({}).post(route('mixpost.affiliate-analytics.products.drafts.generate', product.uuid), {preserveScroll: true});
+};
+
+const updateDraft = (draft, status) => {
+    useForm({parent_post: draft.parent_post, reply_post: draft.reply_post, status})
+        .put(route('mixpost.affiliate-analytics.drafts.update', draft.uuid), {preserveScroll: true});
 };
 
 const number = (value) => new Intl.NumberFormat('ja-JP').format(value || 0);
@@ -83,6 +104,59 @@ const money = (value) => new Intl.NumberFormat('ja-JP', {
         </div>
 
         <div class="row-px grid grid-cols-1 xl:grid-cols-2 gap-lg mb-xl">
+            <section class="bg-white border border-gray-200 rounded-lg p-lg xl:col-span-2">
+                <h2 class="font-semibold mb-xs">アフィリエイト投稿案を作る</h2>
+                <p class="text-sm text-gray-500 mb-md">確認できる実体験だけを登録します。リンクとPR表記は返信案へ分離し、自動公開はしません。</p>
+                <form @submit.prevent="submitProduct" class="grid grid-cols-1 md:grid-cols-2 gap-md">
+                    <input v-model="productForm.name" required placeholder="商品名" class="rounded-md border-gray-300"/>
+                    <input v-model="productForm.category" placeholder="カテゴリ（任意）" class="rounded-md border-gray-300"/>
+                    <input v-model="productForm.network" required placeholder="Amazonなど" class="rounded-md border-gray-300"/>
+                    <input v-model="productForm.affiliate_url" required type="url" placeholder="アフィリエイトリンク" class="rounded-md border-gray-300"/>
+                    <textarea v-model="productForm.actual_scene" required rows="3" placeholder="実際に使った場面（事実のみ）" class="rounded-md border-gray-300"/>
+                    <textarea v-model="productForm.benefit" required rows="3" placeholder="実際に便利だった点" class="rounded-md border-gray-300"/>
+                    <textarea v-model="productForm.drawback" required rows="3" placeholder="正直な欠点・向かない人" class="rounded-md border-gray-300"/>
+                    <button type="submit" :disabled="productForm.processing" class="px-lg py-sm rounded-md bg-black text-white disabled:opacity-50">商品と実体験を登録</button>
+                </form>
+                <div class="mt-lg flex flex-wrap gap-sm">
+                    <button v-for="product in affiliateProducts" :key="product.uuid" @click="generateDrafts(product)"
+                            class="rounded-lg bg-gray-100 px-md py-sm text-sm hover:bg-gray-200">
+                        「{{ product.name }}」の投稿案を3件作る
+                    </button>
+                    <span v-if="!affiliateProducts.length" class="text-sm text-gray-500">商品を登録すると投稿案を作れます。</span>
+                </div>
+            </section>
+
+            <section v-if="affiliateDrafts.length" class="bg-white border border-gray-200 rounded-lg p-lg xl:col-span-2">
+                <h2 class="font-semibold mb-md">確認待ちの投稿案</h2>
+                <div class="space-y-lg">
+                    <article v-for="draft in affiliateDrafts" :key="draft.uuid" class="border rounded-lg p-md">
+                        <div class="flex flex-wrap justify-between gap-sm mb-sm">
+                            <strong>{{ draft.product_name }}／{{ draft.angle }}</strong>
+                            <span class="text-xs text-gray-500">{{ draft.status }}</span>
+                        </div>
+                        <label class="text-xs text-gray-500">親投稿（リンクなし）</label>
+                        <textarea v-model="draft.parent_post" rows="4" class="mt-xs w-full rounded-md border-gray-300"/>
+                        <label class="mt-md block text-xs text-gray-500">返信（PR表記・リンク）</label>
+                        <textarea v-model="draft.reply_post" rows="4" class="mt-xs w-full rounded-md border-gray-300"/>
+                        <p class="mt-sm text-xs text-gray-500">{{ draft.generation_reason }}</p>
+                        <div v-if="draft.evidence_posts?.length" class="mt-sm text-xs text-gray-500">
+                            根拠候補：
+                            <a v-for="(post, index) in draft.evidence_posts" :key="post.url" :href="post.url" target="_blank" class="hover:underline mr-sm">
+                                {{ index + 1 }}. {{ number(post.views) }}表示
+                            </a>
+                        </div>
+                        <div class="mt-sm flex flex-wrap gap-xs text-xs">
+                            <span v-for="(score, key) in draft.scores" :key="key" class="rounded bg-gray-100 px-sm py-xs">{{ key }} {{ score }}/10</span>
+                        </div>
+                        <div class="mt-md flex gap-sm">
+                            <button @click="updateDraft(draft, 'draft')" class="rounded-md bg-gray-100 px-md py-xs">編集を保存</button>
+                            <button @click="updateDraft(draft, 'approved')" class="rounded-md bg-green-700 text-white px-md py-xs">採用</button>
+                            <button @click="updateDraft(draft, 'rejected')" class="rounded-md bg-red-50 text-red-700 px-md py-xs">不採用</button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+
             <section class="bg-white border border-gray-200 rounded-lg p-lg xl:col-span-2">
                 <h2 class="font-semibold mb-xs">参考アカウントを自動調査</h2>
                 <p class="text-sm text-gray-500 mb-md">テーマから候補を探し、各アカウントの直近投稿を比較する調査依頼を作成します。</p>

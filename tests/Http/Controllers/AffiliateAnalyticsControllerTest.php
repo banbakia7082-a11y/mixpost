@@ -3,12 +3,39 @@
 use Illuminate\Http\UploadedFile;
 use Inertia\Testing\AssertableInertia as Assert;
 use Inovector\Mixpost\Models\AffiliatePost;
+use Inovector\Mixpost\Models\AffiliateDraft;
+use Inovector\Mixpost\Models\AffiliateProduct;
 use Inovector\Mixpost\Models\User;
 use Inovector\Mixpost\Models\ThreadsReferenceAccount;
 use Inovector\Mixpost\Models\ThreadsResearchRequest;
 
 beforeEach(function () {
     test()->user = User::factory()->create();
+});
+
+test('creates reviewable affiliate drafts without placing the link in the parent post', function () {
+    $this->actingAs(test()->user)->post(route('mixpost.affiliate-analytics.products.store'), [
+        'name' => '折りたたみ傘',
+        'category' => '日用品',
+        'network' => 'Amazon',
+        'affiliate_url' => 'https://example.com/affiliate',
+        'actual_scene' => '駅に入ったとき片手で畳めました。',
+        'benefit' => '移動を止めずにしまえます。',
+        'drawback' => '一般的な傘より少し重いです。',
+    ])->assertSessionHasNoErrors();
+
+    $product = AffiliateProduct::query()->firstOrFail();
+    $this->actingAs(test()->user)
+        ->post(route('mixpost.affiliate-analytics.products.drafts.generate', $product))
+        ->assertSessionHasNoErrors();
+
+    expect(AffiliateDraft::query()->count())->toBe(3);
+    AffiliateDraft::query()->each(function (AffiliateDraft $draft) {
+        expect($draft->parent_post)->not->toContain('https://example.com/affiliate')
+            ->and($draft->reply_post)->toContain('［PR・Amazonアフィリエイト］')
+            ->and($draft->reply_post)->toContain('https://example.com/affiliate')
+            ->and($draft->scores['disclosure'])->toBe(10);
+    });
 });
 
 test('imports affiliate analytics from csv', function () {

@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Route;
 use Inovector\Mixpost\Http\Controllers\AccountEntitiesController;
 use Inovector\Mixpost\Http\Controllers\AffiliateAnalyticsController;
+use Inovector\Mixpost\Http\Controllers\AffiliateDraftController;
 use Inovector\Mixpost\Http\Controllers\AccountsController;
 use Inovector\Mixpost\Http\Controllers\AddAccountController;
 use Inovector\Mixpost\Http\Controllers\AuthenticatedController;
@@ -62,6 +63,12 @@ Route::middleware([
             ->name('affiliate-analytics.research-requests.store');
         Route::post('affiliate-analytics/research-requests/{threadsResearchRequest}/run', [ThreadsResearchRequestController::class, 'run'])
             ->name('affiliate-analytics.research-requests.run');
+        Route::post('affiliate-analytics/products', [AffiliateDraftController::class, 'storeProduct'])
+            ->name('affiliate-analytics.products.store');
+        Route::post('affiliate-analytics/products/{affiliateProduct}/drafts', [AffiliateDraftController::class, 'generate'])
+            ->name('affiliate-analytics.products.drafts.generate');
+        Route::put('affiliate-analytics/drafts/{affiliateDraft}', [AffiliateDraftController::class, 'update'])
+            ->name('affiliate-analytics.drafts.update');
 
         Route::prefix('accounts')->name('accounts.')->group(function () {
             Route::get('/', [AccountsController::class, 'index'])->name('index');
