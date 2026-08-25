@@ -48,6 +48,19 @@ import UpgradePro from "../Pro/UpgradePro.vue";
                     Dashboard
                 </MenuItem>
             </MenuGroupBody>
+            <MenuGroupBody>
+                <MenuItem :url="route('mixpost.affiliate-analytics.index')"
+                          :active="$page.component === 'AffiliateAnalytics'">
+                    <template #icon>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
+                             viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M3 3v18h18M7 16l4-4 3 3 5-7"/>
+                        </svg>
+                    </template>
+                    Affiliate Analytics
+                </MenuItem>
+            </MenuGroupBody>
             <MenuDelimiter/>
             <MenuGroupHeader :create-url="route('mixpost.posts.create')" class="mt-lg">
                 Content
