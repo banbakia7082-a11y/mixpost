@@ -40,6 +40,7 @@ class MixpostServiceProvider extends PackageServiceProvider
             ->hasRoute('web')
             ->hasMigrations([
                 'create_mixpost_tables',
+                'create_mixpost_affiliate_analytics_tables',
             ])
             ->hasCommands([
                 PublishAssetsCommand::class,
