@@ -76,3 +76,53 @@ test('renders affiliate analytics summary', function () {
             ->has('posts', 1)
         );
 });
+
+
+test('imports Threads data collected by Codex browser', function () {
+    $payload = [
+        'captured_at' => '2026-08-25T21:00:00+09:00',
+        'posts' => [
+            [
+                'post_url' => 'https://www.threads.net/@example/post/abc',
+                'external_post_id' => 'abc',
+                'content' => 'Test Threads post',
+                'published_at' => '2026-08-24T08:30:00+09:00',
+                'disclosure_present' => true,
+                'views' => 1520,
+                'reactions' => 61,
+                'replies' => 7,
+                'reposts' => 4,
+                'quotes' => 1,
+            ],
+        ],
+    ];
+
+    $this->actingAs(test()->user)
+        ->post(route('mixpost.affiliate-analytics.threads-browser.store'), [
+            'payload' => json_encode($payload),
+        ])
+        ->assertSessionHasNoErrors();
+
+    $post = AffiliatePost::query()->first();
+
+    expect($post)
+        ->platform->toBe('threads')
+        ->external_post_id->toBe('abc')
+        ->disclosure_present->toBeTrue()
+        ->and($post->latestSnapshot->views)->toBe(1520)
+        ->and($post->latestSnapshot->reactions)->toBe(61)
+        ->and($post->latestSnapshot->raw_metrics['source'])->toBe('codex_browser');
+});
+
+test('rejects invalid Threads browser payload', function () {
+    $this->actingAs(test()->user)
+        ->post(route('mixpost.affiliate-analytics.threads-browser.store'), [
+            'payload' => json_encode([
+                'captured_at' => '2026-08-25T21:00:00+09:00',
+                'posts' => [['post_url' => 'not-a-url']],
+            ]),
+        ])
+        ->assertSessionHasErrors('payload');
+
+    expect(AffiliatePost::query()->count())->toBe(0);
+});
